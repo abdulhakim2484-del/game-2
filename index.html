@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smoke Slayer: Style Over Toxins</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+        body {
+            background-color: #0d0d11;
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        #game-container {
+            position: relative;
+            width: 800px;
+            height: 500px;
+            background: linear-gradient(to bottom, #1a1a24, #050508);
+            border: 3px solid #ff0055;
+            box-shadow: 0 0 20px rgba(255, 0, 85, 0.4);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        /* UI Overlay */
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 15px;
+        }
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        .status-box {
+            background: rgba(0, 0, 0, 0.6);
+            padding: 10px;
+            border-radius: 5px;
+            border-left: 4px solid #ff0055;
+        }
+        .bar-container {
+            width: 200px;
+            height: 15px;
+            background: #333;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+        .hp-bar {
+            width: 100%;
+            height: 100%;
+            background: #ff0055;
+            transition: width 0.3s;
+        }
+        .style-rank-box {
+            text-align: right;
+        }
+        .style-rank {
+            font-size: 48px;
+            font-weight: 900;
+            font-style: italic;
+            color: #ffcc00;
+            text-shadow: 0 0 10px #ffcc00, 2px 2px 0px #000;
+        }
+        .style-text {
+            font-size: 14px;
+            letter-spacing: 2px;
+            color: #aaa;
+        }
+        /* Quiz Overlay */
+        #quiz-modal {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            background: rgba(15, 15, 25, 0.95);
+            border: 2px solid #00e5ff;
+            border-radius: 10px;
+            padding: 15px;
+            pointer-events: auto;
+            box-shadow: 0 0 15px rgba(0, 229, 255, 0.3);
+            display: none;
+        }
+        .quiz-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 14px;
+            color: #00e5ff;
+        }
+        .timer-bar-container {
+            width: 100%;
+            height: 6px;
+            background: #222;
+            margin-bottom: 10px;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .timer-bar {
+            width: 100%;
+            height: 100%;
+            background: #00e5ff;
+        }
+        .question-text {
+            font-size: 16px;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        .btn-option {
+            background: #2a2a3d;
+            color: #fff;
+            border: 1px solid #444;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 13px;
+            text-align: left;
+            transition: all 0.2s;
+        }
+        .btn-option:hover {
+            background: #00e5ff;
+            color: #000;
+            font-weight: bold;
+        }
+        /* Game Over Screen */
+        #overlay-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            pointer-events: auto;
+            z-index: 10;
+        }
+        .btn-start {
+            background: #ff0055;
+            color: #fff;
+            border: none;
+            padding: 12px 30px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 15px;
+            box-shadow: 0 0 10px #ff0055;
+        }
+        .btn-start:hover {
+            background: #ff3300;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <canvas id="gameCanvas" width="800" height="500"></canvas>
+    
+    <div class="ui-layer">
+        <div class="top-bar">
+            <div class="status-box">
+                <div>HEALTH HUNTER</div>
+                <div class="bar-container">
+                    <div id="hp-bar" class="hp-bar"></div>
+                </div>
+            </div>
+            <div class="style-rank-box">
+                <div class="style-text">STYLE RANK</div>
+                <div id="style-rank" class="style-rank">D</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quiz Panel -->
+    <div id="quiz-modal">
+        <div class="quiz-header">
+            <span id="quiz-category">KATEGORI</span>
+            <span id="quiz-enemy">VS TAR FIEND</span>
+        </div>
+        <div class="timer-bar-container">
+            <div id="timer-bar" class="timer-bar"></div>
+        </div>
+        <div id="question-text" class="question-text">Pertanyaan Kuis...</div>
+        <div id="options-grid" class="options-grid"></div>
+    </div>
+
+    <!-- Start / Game Over Screen -->
+    <div id="overlay-screen">
+        <h1 id="screen-title" style="color: #ff0055; font-size: 36px; margin-bottom: 10px;">SMOKE SLAYER</h1>
+        <p id="screen-desc" style="color: #aaa;">Style Over Toxins</p>
+        <button id="btn-action" class="btn-start" onclick="startGame()">MULAI MAIN</button>
+    </div>
+</div>
+
+<script>
+const questions = [
+    {
+        category: "Zat Kimia Beracun",
+        enemy: "Nicotine Shade",
+        question: "Zat adiktif dalam rokok yang menyebabkan penyempitan pembuluh darah adalah...",
+        options: ["Tar", "Nikotin", "Karbon Monoksida", "Formaldehida"],
+        correct: 1
+    },
+    {
+        category: "Zat Kimia Beracun",
+        enemy: "Carbon Phantom",
+        question: "Gas beracun hasil pembakaran rokok yang mengikat hemoglobin darah adalah...",
+        options: ["Arsenik", "Amonia", "Karbon Monoksida", "Benzena"],
+        correct: 2
+    },
+    {
+        category: "Dampak Fisik",
+        enemy: "Tar Fiend",
+        question: "Komponen partikel padat asap rokok yang mengendap dan merusak paru-paru adalah...",
+        options: ["Tar", "Nikotin", "Aseton", "Sianida"],
+        correct: 0
+    },
+    {
+        category: "Dampak Fisik",
+        enemy: "Tar Fiend",
+        question: "Penyakit kronis akibat kerusakan alveolus paru-paru karena asap rokok adalah...",
+        options: ["Asma", "Emfisema (PPOK)", "TBC", "Pneumonia"],
+        correct: 1
+    },
+    {
+        category: "Perokok Pasif",
+        enemy: "Carbon Phantom",
+        question: "Istilah untuk racun asap rokok yang tertinggal pada benda/pakaian adalah...",
+        options: ["Firsthand", "Secondhand", "Thirdhand Smoke", "Freehand"],
+        correct: 2
+    }
+];
+
+const ranks = ["D", "C", "B", "A", "S", "SS", "SSS"];
+let rankIndex = 0;
+let playerHP = 100;
+let currentQIndex = 0;
+let timerInterval = null;
+let timeLeft = 7;
+let maxTime = 7;
+let gameState = "MENU"; // MENU, PLAYING, GAMEOVER
+
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+// Render Loop
+function render() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Draw Floor
+    ctx.fillStyle = "#11111a";
+    ctx.fillRect(0, 400, 800, 100);
+    ctx.strokeStyle = "#ff0055";
+    ctx.beginPath();
+    ctx.moveTo(0, 400);
+    ctx.lineTo(800, 400);
+    ctx.stroke();
+
+    if (gameState === "PLAYING") {
+        // Draw Player
+        ctx.fillStyle = "#00e5ff";
+        ctx.fillRect(150, 320, 40, 80);
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = "#00e5ff";
+
+        // Draw Enemy
+        ctx.fillStyle = "#ff0055";
+        ctx.fillRect(600, 310, 50, 90);
+        ctx.shadowColor = "#ff0055";
+        ctx.shadowBlur = 10;
+    }
+    requestAnimationFrame(render);
+}
+render();
+
+function startGame() {
+    gameState = "PLAYING";
+    playerHP = 100;
+    rankIndex = 0;
+    currentQIndex = 0;
+    updateUI();
+    document.getElementById("overlay-screen").style.display = "none";
+    loadNextQuestion();
+}
+
+function loadNextQuestion() {
+    if (currentQIndex >= questions.length) {
+        currentQIndex = 0;
+    }
+
+    const q = questions[currentQIndex];
+    document.getElementById("quiz-category").innerText = q.category;
+    document.getElementById("quiz-enemy").innerText = "VS " + q.enemy.toUpperCase();
+    document.getElementById("question-text").innerText = q.question;
+
+    const optionsGrid = document.getElementById("options-grid");
+    optionsGrid.innerHTML = "";
+    q.options.forEach((opt, idx) => {
+        const btn = document.createElement("button");
+        btn.className = "btn-option";
+        btn.innerText = opt;
+        btn.onclick = () => answerQuestion(idx);
+        optionsGrid.appendChild(btn);
+    });
+
+    document.getElementById("quiz-modal").style.display = "block";
+    startTimer();
+}
+
+function startTimer() {
+    clearInterval(timerInterval);
+    timeLeft = maxTime;
+    updateTimerBar();
+
+    timerInterval = setInterval(() => {
+        timeLeft -= 0.1;
+        updateTimerBar();
+        if (timeLeft <= 0) {
+            clearInterval(timerInterval);
+            answerQuestion(-1); // Timeout / Salah
+        }
+    }, 100);
+}
+
+function updateTimerBar() {
+    const pct = Math.max(0, (timeLeft / maxTime) * 100);
+    document.getElementById("timer-bar").style.width = pct + "%";
+}
+
+function answerQuestion(selectedIdx) {
+    clearInterval(timerInterval);
+    const q = questions[currentQIndex];
+
+    if (selectedIdx === q.correct) {
+        // Benar: Rank Naik
+        if (rankIndex < ranks.length - 1) rankIndex++;
+    } else {
+        // Salah: Reset Rank & Kurangi HP
+        rankIndex = 0;
+        playerHP -= 25;
+    }
+
+    currentQIndex++;
+    updateUI();
+
+    if (playerHP <= 0) {
+        gameOver();
+    } else {
+        loadNextQuestion();
+    }
+}
+
+function updateUI() {
+    document.getElementById("hp-bar").style.width = Math.max(0, playerHP) + "%";
+    document.getElementById("style-rank").innerText = ranks[rankIndex];
+}
+
+function gameOver() {
+    gameState = "GAMEOVER";
+    document.getElementById("quiz-modal").style.display = "none";
+    document.getElementById("overlay-screen").style.display = "flex";
+    document.getElementById("screen-title").innerText = "GAME OVER";
+    document.getElementById("screen-desc").innerText = "Kesehatan Anda telah habis terinfeksi racun!";
+    document.getElementById("btn-action").innerText = "COBA LAGI";
+}
+</script>
+
+</body>
+</html>
